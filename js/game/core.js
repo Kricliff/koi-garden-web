@@ -1,0 +1,571 @@
+// Koi Garden: Constants, shapes, lines, level data, the saved state and the iCloud backup.
+// Part of the game. All files in js/game/ share one scope and load in the order index.html lists.
+
+const N = 9;
+const COLORS = 6;
+const KOI = 7;
+const ROCK = 8;
+const UNDO_PER_GAME = 2;
+const SWAP_COST = 20;
+const HINT_COST = 15;
+// Pearls buy help in a Journey level: a joker koi in the gold slot, or five more pieces when you run out
+const JOKER_PRICE = { arrow: 30, ripple: 50, rainbow: 70 };
+const MORE_PIECES = 5, MORE_PIECES_COST = 40;
+// A level lost twice or more gets a few more pieces on the next try: 2 for each loss from the second, at most 6
+const HELP_PER_FAIL = 2, HELP_MAX = 6;
+const helpPieces = n => Math.min(HELP_MAX, HELP_PER_FAIL * Math.max(0, ((journey.fails || {})[n] || 0) - 1));
+// Pearls outside the Journey: for the day's official Daily, and at these scores in one Endless game
+const DAILY_PEARLS = 20;
+const ENDLESS_PEARLS = [[500, 10], [1000, 20], [2000, 40]];
+const AD_GAP_MS = 150000;       // at least 2.5 minutes between ad breaks
+const AD_AFTER_REWARD_MS = 90000;
+const FREE_ROUNDS = 2;          // no ad break in the first rounds of a session
+// No 3×3 block: it filled a whole square at once and gave easy points
+const SHAPE_SRC = [
+  "x", "xx", "x\nx", "xxx", "x\nx\nx", "xxxx", "x\nx\nx\nx", "xxxxx", "x\nx\nx\nx\nx",
+  "xx\nxx", "xxx\nxxx", "xx\nxx\nxx",
+  "xx\nx.", "xx\n.x", "x.\nxx", ".x\nxx",
+  "x.\n.x", ".x\nx.", "x..\n.x.\n..x", "..x\n.x.\nx..",
+  "x..\nx..\nxxx", "..x\n..x\nxxx", "xxx\nx..\nx..", "xxx\n..x\n..x",
+  "xxx\n.x.", ".x.\nxxx", "x.\nxx\nx.", ".x\nxx\n.x", ".x.\nxxx\n.x.",
+  "xx.\n.xx", ".xx\nxx.", "x.\nxx\n.x", ".x\nxx\nx.",
+  "x.\nx.\nxx", ".x\n.x\nxx", "xx\nx.\nx.", "xx\n.x\n.x",
+  "xxx\nx..", "xxx\n..x", "x..\nxxx", "..x\nxxx"
+].map(s => s.split("\n"));
+const stonesIn = g => g.join("").split("x").length - 1;
+// Big and awkward pieces show up less often
+const WEIGHTS = SHAPE_SRC.map(g => {
+  const n = stonesIn(g), w = g[0].length, h = g.length;
+  return (w === 5 || h === 5) ? 0.6 : n === 1 ? 0.6 : 1;
+});
+const shapeCache = new Map();
+function parse(grid) {
+  const key = grid.join("/");
+  if (shapeCache.has(key)) return shapeCache.get(key);
+  const cells = [];
+  grid.forEach((row, r) => [...row].forEach((ch, c) => { if (ch === "x") cells.push([r, c]); }));
+  const sh = { cells, h: grid.length, w: grid[0].length, grid };
+  shapeCache.set(key, sh);
+  return sh;
+}
+function rotateGrid(g) {
+  const h = g.length, w = g[0].length, out = [];
+  for (let r = 0; r < w; r++) { let row = ""; for (let c = 0; c < h; c++) row += g[h - 1 - c][r]; out.push(row); }
+  return out;
+}
+
+// Every line a player can clear: 9 rows, 9 columns, 9 beds of 3×3
+const LINES = [];
+for (let r = 0; r < N; r++) LINES.push({ kind: "row", cells: [...Array(N)].map((_, c) => r * N + c) });
+for (let c = 0; c < N; c++) LINES.push({ kind: "col", cells: [...Array(N)].map((_, r) => r * N + c) });
+const BEDS = [];
+for (let br = 0; br < 3; br++) for (let bc = 0; bc < 3; bc++) {
+  const cells = [];
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) cells.push((br * 3 + r) * N + bc * 3 + c);
+  const bed = { kind: "bed", cells, br, bc };
+  BEDS.push(bed);
+  LINES.push(bed);
+}
+const TUT_GAP = 4 * N + 4;
+
+/* ---------- Journey levels live in levels.js, shared with the level tuner ---------- */
+const KL = window.KoiLevels;
+const levelDef = n => KL.levelDef(n);
+const BAMBOO = KL.BAMBOO, HOLE = KL.HOLE, FROG = KL.FROG, LEAF = KL.LEAF;
+const chapterOf = KL.chapterOf, chapterName = KL.chapterName, PER_CHAPTER = KL.PER;
+// Finishing a chapter's last level gives a pearl bonus
+const CHAPTER_PEARLS = 100;
+// One koi per level for the collection. Top-down koi sprites, head pointing right, in img/koi/
+const KOI_TYPES = [
+  { name: "Kohaku", img: "img/koi/01-kohaku.png" },
+  { name: "Showa", img: "img/koi/02-showa.png" },
+  { name: "Asagi", img: "img/koi/03-asagi.png" },
+  { name: "Ogon", img: "img/koi/04-ogon.png" },
+  { name: "Yamabuki", img: "img/koi/05-yamabuki.png" },
+  { name: "Chagoi", img: "img/koi/06-chagoi.png" },
+  { name: "Bekko", img: "img/koi/07-bekko.png" },
+  { name: "Shusui", img: "img/koi/08-shusui.png" },
+  { name: "Kumonryu", img: "img/koi/09-kumonryu.png" },
+  { name: "Hi Utsuri", img: "img/koi/10-hi-utsuri.png" },
+  { name: "Ki Utsuri", img: "img/koi/11-ki-utsuri.png" },
+  { name: "Goshiki", img: "img/koi/12-goshiki.png" },
+  { name: "Kujaku", img: "img/koi/13-kujaku.png" },
+  { name: "Platinum", img: "img/koi/14-platinum.png" },
+  { name: "Ochiba", img: "img/koi/15-ochiba.png" }
+];
+// Rare koi come from the Daily streak, one at each milestone
+const RARE_KOI = [
+  { name: "Tancho", img: "img/koi/16-tancho.png", at: 7 },
+  { name: "Kin Showa", img: "img/koi/17-kin-showa.png", at: 14 },
+  { name: "Ginrin Kohaku", img: "img/koi/18-ginrin-kohaku.png", at: 21 },
+  { name: "Kikokuryu", img: "img/koi/19-kikokuryu.png", at: 30 }
+];
+// One koi for finishing each of chapters 2-10, painted in code (assets/koi/make_chapter_koi.py)
+const CHAPTER_KOI = [
+  { name: "Sanke", img: "img/koi/20-sanke.png", chapter: 2 },
+  { name: "Shiro Utsuri", img: "img/koi/21-shiro-utsuri.png", chapter: 3 },
+  { name: "Ai Goromo", img: "img/koi/22-ai-goromo.png", chapter: 4 },
+  { name: "Soragoi", img: "img/koi/23-soragoi.png", chapter: 5 },
+  { name: "Benigoi", img: "img/koi/24-benigoi.png", chapter: 6 },
+  { name: "Karashigoi", img: "img/koi/25-karashigoi.png", chapter: 7 },
+  { name: "Gin Matsuba", img: "img/koi/26-gin-matsuba.png", chapter: 8 },
+  { name: "Hariwake", img: "img/koi/27-hariwake.png", chapter: 9 },
+  { name: "Midorigoi", img: "img/koi/28-midorigoi.png", chapter: 10 }
+];
+// One koi for each weekly festival, also painted in code. Each comes only by reaching the last goal of its festival week.
+const FESTIVAL_KOI = [
+  { name: "Orenji Ogon", img: "img/koi/29-orenji-ogon.png", festival: "lantern", festName: "Lantern Festival" },
+  { name: "Kikusui", img: "img/koi/30-kikusui.png", festival: "moon", festName: "Moon Viewing" },
+  { name: "Sakura Ogon", img: "img/koi/31-sakura-ogon.png", festival: "sakura", festName: "Sakura Week" },
+  { name: "Kin Ki Utsuri", img: "img/koi/32-kin-ki-utsuri.png", festival: "firefly", festName: "Firefly Night" }
+];
+// Two more koi in each of chapters 2-10, for winning its fifth and tenth level (both Hard), so the collection keeps
+// growing after chapter 1. Painted in code like the chapter koi.
+const MILESTONE_KOI = [
+  { name: "Kigoi", img: "img/koi/33-kigoi.png", level: 20 },
+  { name: "Aka Matsuba", img: "img/koi/34-aka-matsuba.png", level: 25 },
+  { name: "Shiro Bekko", img: "img/koi/35-shiro-bekko.png", level: 35 },
+  { name: "Nezu Ogon", img: "img/koi/36-nezu-ogon.png", level: 40 },
+  { name: "Ki Bekko", img: "img/koi/37-ki-bekko.png", level: 50 },
+  { name: "Aka Bekko", img: "img/koi/38-aka-bekko.png", level: 55 },
+  { name: "Budo Goromo", img: "img/koi/39-budo-goromo.png", level: 65 },
+  { name: "Sumi Goromo", img: "img/koi/40-sumi-goromo.png", level: 70 },
+  { name: "Kin Matsuba", img: "img/koi/41-kin-matsuba.png", level: 80 },
+  { name: "Yamatonishiki", img: "img/koi/42-yamatonishiki.png", level: 85 },
+  { name: "Beni Kikokuryu", img: "img/koi/43-beni-kikokuryu.png", level: 95 },
+  { name: "Kindai Showa", img: "img/koi/44-kindai-showa.png", level: 100 },
+  { name: "Hi Showa", img: "img/koi/45-hi-showa.png", level: 110 },
+  { name: "Ki Matsuba", img: "img/koi/46-ki-matsuba.png", level: 115 },
+  { name: "Shiro Matsuba", img: "img/koi/47-shiro-matsuba.png", level: 125 },
+  { name: "Narumi Asagi", img: "img/koi/48-narumi-asagi.png", level: 130 },
+  { name: "Kin Hi Utsuri", img: "img/koi/49-kin-hi-utsuri.png", level: 140 },
+  { name: "Mukashi Ogon", img: "img/koi/50-mukashi-ogon.png", level: 145 }
+];
+// One koi for each of the first three rounds of the lotus trail (after level 150)
+const TRAIL_KOI = [
+  { name: "Kin Kikokuryu", img: "img/koi/51-kin-kikokuryu.png", round: 2 },
+  { name: "Tancho Sanke", img: "img/koi/52-tancho-sanke.png", round: 3 },
+  { name: "Kanoko Kohaku", img: "img/koi/53-kanoko-kohaku.png", round: 4 }
+];
+// Every koi has one index, kept for good since saved progress stores them: 0-14 from Journey levels, 15-18 rare,
+// 19-27 from chapters, 28-31 from festivals, 32-49 milestones, 50-52 the lotus trail
+const ALL_KOI = [...KOI_TYPES, ...RARE_KOI.map(r => ({ ...r, rare: true })), ...CHAPTER_KOI.map(k => ({ ...k, chapterKoi: true })),
+  ...FESTIVAL_KOI.map(k => ({ ...k, festivalKoi: true })), ...MILESTONE_KOI.map(k => ({ ...k, milestoneKoi: true })),
+  ...TRAIL_KOI.map(k => ({ ...k, trailKoi: true }))];
+const rareIndex = r => KOI_TYPES.length + RARE_KOI.indexOf(r);
+const CHAPTER_KOI_START = KOI_TYPES.length + RARE_KOI.length;
+const FESTIVAL_KOI_START = CHAPTER_KOI_START + CHAPTER_KOI.length;
+const MILESTONE_KOI_START = FESTIVAL_KOI_START + FESTIVAL_KOI.length;
+const TRAIL_KOI_START = MILESTONE_KOI_START + MILESTONE_KOI.length;
+// The koi for winning level n, or -1 when that level has none
+const milestoneKoiIndex = n => { const k = MILESTONE_KOI.findIndex(m => m.level === n); return k < 0 ? -1 : MILESTONE_KOI_START + k; };
+const trailKoiIndex = round => { const k = TRAIL_KOI.findIndex(t => t.round === round); return k < 0 ? -1 : TRAIL_KOI_START + k; };
+
+/* ---------- The lotus trail: something new to play for after level 150 ----------
+   From level 151 every pond has lotus flowers on it (three, when lotus is not the goal already). They are not part of
+   the goal: the level ends when the goal is met, so the flowers have to be collected on the way. Up to three count
+   for each level, the best win is kept, and each round of 135 levels has three gifts: pearls, pearls, and pearls
+   with the round's koi. */
+const TRAIL_FROM = 151, TRAIL_ROUND = 135, TRAIL_PER_LEVEL = 3;
+const TRAIL_GOALS = [60, 130, 200], TRAIL_PEARLS = [100, 150, 250];
+const trailRound = n => n < TRAIL_FROM ? 0 : Math.floor((n - TRAIL_FROM) / TRAIL_ROUND) + 2;
+function trailCount(round) {
+  const from = TRAIL_FROM + (round - 2) * TRAIL_ROUND;
+  let sum = 0;
+  Object.entries(journey.lotus || {}).forEach(([n, v]) => { if (+n >= from && +n < from + TRAIL_ROUND) sum += +v || 0; });
+  return sum;
+}
+// "34/60" towards the next gift of the round, or the round's total when every gift is taken
+function trailText(round) {
+  const now = trailCount(round), next = TRAIL_GOALS.find(g => g > now);
+  return next ? `${now}/${next}` : `${now} · every gift collected`;
+}
+// The koi for finishing chapter c, or -1 when that chapter has none
+const chapterKoiIndex = c => CHAPTER_KOI.some(k => k.chapter === c) ? CHAPTER_KOI_START + CHAPTER_KOI.findIndex(k => k.chapter === c) : -1;
+// Players who finished chapters before chapter koi existed get theirs; true when any were added
+function grantChapterKoi() {
+  let added = false;
+  CHAPTER_KOI.forEach(k => {
+    const i = chapterKoiIndex(k.chapter);
+    if (journey.unlocked > k.chapter * PER_CHAPTER && !journey.koi.includes(i)) { journey.koi.push(i); added = true; }
+  });
+  // The same for the milestone koi: a level counts when it was won (it has stars), not when it was skipped
+  MILESTONE_KOI.forEach(k => {
+    const i = milestoneKoiIndex(k.level);
+    if (journey.stars[k.level] > 0 && !journey.koi.includes(i)) { journey.koi.push(i); added = true; }
+  });
+  return added;
+}
+const koiImages = ALL_KOI.map(k => { const im = new Image(); im.src = k.img; return im; });
+// Joker koi work like Candy Crush specials: bigger moves earn stronger jokers.
+// Each uses a koi sprite from the collection and lands on any empty cell.
+const JOKERS = {
+  arrow: { name: "Arrow Koi", koi: 7, short: "Row + column", does: "clears its whole row and column",
+    explain: "Drop it on any empty spot. It shoots out along that spot's row and column and clears every stone on both lines." },
+  ripple: { name: "Ripple Koi", koi: 8, short: "5×5 area", does: "clears a 5×5 area around it",
+    explain: "Drop it on any empty spot. A wave spreads two spots in every direction and clears every stone in that 5×5 square." },
+  rainbow: { name: "Rainbow Koi", koi: 11, short: "One colour", does: "clears every stone in the colour it lands next to",
+    explain: "Drop it next to the colour you want gone. It clears every stone of that colour, all over the board." }
+};
+const MAX_JOKERS = 3;
+// Win streak: Journey levels won in a row. Steps 1, 3 and 5 start the next level with a joker ready.
+// Losing a level takes the streak down one step (5 to 3, 3 to 1, 1 to 0), so one loss never takes every joker
+// at once. Keeping going with a video or pearls and winning brings back what was lost.
+const CURRENT_STEPS = [{ at: 1, joker: "arrow" }, { at: 3, joker: "ripple" }, { at: 5, joker: "rainbow" }];
+const CURRENT_MAX = 5;
+// The streak after a loss: the joker step below the one the player stood on
+function streakAfterLoss(s) {
+  const reached = CURRENT_STEPS.filter(st => s >= st.at);
+  return reached.length > 1 ? reached[reached.length - 2].at : 0;
+}
+const currentJokers = s => CURRENT_STEPS.filter(st => s >= st.at).map(st => st.joker);
+const jokerList = list => list.map(t => JOKERS[t].name.replace(" Koi", "")).join(" + ") + " Koi";
+// Clearing the whole board at once
+const STILL_BONUS = 150;
+const NEW_IN = {
+  1: "Your first level. Score points by placing pieces and clearing lines.",
+  2: "New: golden koi stones. Clear the row, column or square they sit in to set them free.",
+  4: "New goal: Harmony. Fill a 3×3 square with stones of one colour.",
+  6: "New goal: clear every starting stone. They wear a gold ring with a dot, so you can tell them from your own.",
+  5: "Hard level: fewer spare pieces, and double pearls if you make it.",
+  10: "Hard level: plan which squares to clear first. Double pearls.",
+  11: "New: ice. A frozen stone needs two clears. The first breaks the ice. A joker koi takes it in one go.",
+  15: "Chapter finale and a Hard level. Take a breath and plan ahead.",
+  16: "New: bamboo. Every few moves without a clear, it grows into an empty spot next to it. Clear it before it spreads.",
+  17: "Bamboo grows only while you miss. Each clear resets its count.",
+  31: "New: lotus flowers float on empty spots. Fill the row, column or square under a flower and clear it to collect the flower.",
+  46: "New: shaped boards. The water is part of no line, so rows and columns through it are shorter, and easier to fill.",
+  61: "New: blossom stones. When a clear takes one, it bursts and takes every stone around it too. Two side by side set each other off.",
+  76: "New goal: frogs. Every few moves they hop to a nearby spot. Clear the row, column or square a frog sits in to send it home.",
+  91: "Tea House mixes everything you have met so far. Look at the goal first.",
+  106: "New: maple leaves. Every few moves a leaf drifts onto an empty spot. Clear it like any stone before the board fills up.",
+  121: "Snow Temple: more of the stones are frozen. Each needs two clears.",
+  136: "The last chapter, Golden Pagoda: everything at once. Take a breath before each Hard level.",
+  151: "New: the lotus trail. From here every pond has lotus flowers. They are not part of the goal, so collect them before you finish the level. Enough of them bring pearls and a new koi."
+};
+const goalTarget = L => KL.goalTarget(L);
+// What is still missing, in words: "2 koi", "1 lotus flower", "40 points"
+function goalShortBy(L, left) {
+  if (L.goal === "bamboo") left = bambooLeft();
+  if (left <= 0) return "";
+  const words = { score: ["point", "points"], koi: ["koi", "koi"], harmony: ["Harmony square", "Harmony squares"],
+    clear: ["starting stone", "starting stones"], lotus: ["lotus flower", "lotus flowers"], bamboo: ["bamboo", "bamboo"],
+    frog: ["frog", "frogs"] }[L.goal];
+  return `${left} ${words[left === 1 ? 0 : 1]}`;
+}
+const bambooLeft = () => S.board.filter(v => v === BAMBOO).length;
+function goalText(L) {
+  const t = goalTarget(L);
+  return L.goal === "score" ? `Reach ${t} points`
+    : L.goal === "koi" ? `Free ${t} golden koi`
+    : L.goal === "harmony" ? `Make ${t} Harmony ${t === 1 ? "square" : "squares"}`
+    : L.goal === "bamboo" ? "Clear all the bamboo"
+    : L.goal === "lotus" ? `Collect ${t} lotus flowers`
+    : L.goal === "frog" ? `Send ${t} frogs home`
+    : `Clear all ${t} starting stones`;
+}
+function goalProgress() {
+  const L = levelDef(S.level);
+  return L.goal === "score" ? S.score : L.goal === "koi" ? S.koi : L.goal === "harmony" ? S.harmony
+    : L.goal === "lotus" ? S.lotusGot : L.goal === "frog" ? (S.frogs || 0) : L.goal === "bamboo" ? (bambooLeft() ? 0 : goalTarget(L))
+    : L.stones - Object.keys(S.preset).length;
+}
+function goalShort() {
+  const L = levelDef(S.level);
+  if (L.goal === "bamboo") return `Bamboo ${bambooLeft()}`;
+  const name = { score: "Points", koi: "Koi", harmony: "Harmony", clear: "Stones", lotus: "Lotus", frog: "Frogs" }[L.goal];
+  return `${name} ${Math.min(goalProgress(), goalTarget(L))}/${goalTarget(L)}`;
+}
+const goalMet = () => goalProgress() >= goalTarget(levelDef(S.level));
+const piecesLeft = () => (S.limit - S.dealt) + S.tray.filter(Boolean).length;
+
+// Daily challenge: one seed per calendar day gives everyone the same board and pieces
+const DAILY_PIECES = 30;
+const DAILY_EPOCH = Date.UTC(2026, 9, 1);
+const keyOf = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const dayOffset = n => { const d = new Date(); d.setDate(d.getDate() + n); return keyOf(d); };
+const daysBetween = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 864e5);
+function today() {
+  const d = new Date();
+  return {
+    key: keyOf(d),
+    num: Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - DAILY_EPOCH) / 864e5) + 1,
+    label: d.toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+  };
+}
+/* ---------- The weekly challenge ----------
+   Like the Daily, but one board for the whole week (Monday to Sunday) and twice as long. It runs as a Daily with
+   S.weekly set, so everything that holds for the Daily (the same pieces for everyone, no helpers, the first try is the
+   official one) holds here too. Its own best scores are kept in mb-weekly, and it has its own leaderboard. */
+const WEEKLY_PIECES = 60, WEEKLY_PEARLS = 40;
+const WEEKLY_EPOCH = new Date(2026, 10, 2);
+function thisWeek() {
+  const w = weekStart(), end = new Date(w);
+  end.setDate(end.getDate() + 7);
+  return { key: keyOf(w), num: Math.round((w - WEEKLY_EPOCH) / (7 * 864e5)) + 1, end };
+}
+// "weekly" for the weekly challenge, otherwise the game's mode
+const modeId = s => s && s.weekly ? "weekly" : s && s.mode;
+const piecesTotal = () => S.weekly ? WEEKLY_PIECES : DAILY_PIECES;
+// A link that opens the same board for a friend, with the score to beat. The game's own site answers it (published with
+// store/tools/publish-koi.sh), or the app when it is installed. Links shared before 12 November went to
+// kricliff.github.io/koi-garden/play/, which still works.
+const CHALLENGE_URL = "https://koi.cliffordcoaching.no/";
+// A streak shield: bought with pearls, it keeps the win streak the next time a Journey level is lost. One at a time.
+const SHIELD_COST = 60;
+function hashSeed(str) {
+  let h = 2166136261;
+  for (const ch of str) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
+  return h | 0;
+}
+// mulberry32
+function step32(a) {
+  let t = a;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+function seeded(seed) { let a = seed | 0; return () => { a = (a + 0x6D2B79F5) | 0; return step32(a); }; }
+// The daily keeps its generator state in the game, so a reload continues the same sequence
+function rnd() {
+  if (!S || S.mode !== "daily") return Math.random();
+  S.rng = (S.rng + 0x6D2B79F5) | 0;
+  return step32(S.rng);
+}
+
+const WORDS = ["Clear", "Still", "In flow", "Steady", "Present", "Calm mind", "Unshakeable"];
+const TIPS = [
+  "Focus on the next move, not the score. Process beats outcome.",
+  "Breathe out longer than you breathe in. It tells your body it is safe.",
+  "A mistake is information, not a verdict about you.",
+  "Name what you feel. Putting words on it loosens its grip.",
+  "Control what you can control: your next action.",
+  "Confidence grows from small wins you notice. Notice this one.",
+  "When you rush, slow down your breath first and your hands will follow.",
+  "Talk to yourself like you would talk to a good friend under pressure."
+];
+const QUOTES = [
+  "“Muddy water is best cleared by leaving it alone.”",
+  "“Pressure is a privilege.” — Billie Jean King",
+  "“Between stimulus and response there is a space.” — Viktor Frankl",
+  "“The obstacle in the path becomes the path.”",
+  "“Nature does not hurry, yet everything is accomplished.” — Lao Tzu"
+];
+
+const $ = id => document.getElementById(id);
+const boardEl = $("board"), trayEl = $("tray"), overlay = $("overlay");
+const slots = [...trayEl.querySelectorAll(".slot:not(.joker-slot)")];
+const jokerSlot = $("jokerSlot");
+const bedEls = BEDS.map(b => {
+  const d = document.createElement("div");
+  d.className = "bed" + ((b.br + b.bc) % 2 ? " alt" : "");
+  d.style.gridRow = `${b.br * 3 + 1} / span 3`;
+  d.style.gridColumn = `${b.bc * 3 + 1} / span 3`;
+  boardEl.appendChild(d);
+  return d;
+});
+const cellEls = [];
+for (let i = 0; i < N * N; i++) {
+  const d = document.createElement("div");
+  d.className = "cell";
+  d.style.gridRow = String(Math.floor(i / N) + 1);
+  d.style.gridColumn = String((i % N) + 1);
+  boardEl.appendChild(d);
+  cellEls.push(d);
+}
+
+// Rule diagrams in the help card
+document.querySelectorAll(".mini").forEach(m => {
+  const demo = m.dataset.demo;
+  for (let i = 0; i < N * N; i++) {
+    const r = Math.floor(i / N), c = i % N;
+    const el = document.createElement("i");
+    const alt = (Math.floor(r / 3) + Math.floor(c / 3)) % 2 === 1;
+    const on = demo === "row" ? r === 4 : demo === "col" ? c === 4 : (r >= 3 && r < 6 && c >= 3 && c < 6);
+    el.className = on ? "on" : alt ? "alt" : "";
+    m.appendChild(el);
+  }
+});
+
+let S;
+const G = { journey: null, endless: null, daily: null, weekly: null };
+let weekly = { best: {} };
+let daily = { last: "", streak: 0, best: {}, night: false, restoredOn: "" };
+let journey = { unlocked: 1, stars: {}, pearls: 0, fails: {}, koi: [], streak: 0, gift: "", owned: [], lotus: {}, trail: [] };
+let look = { board: "sand", stones: "river" };
+let prefs = { big: false, calm: false, endless: "normal", relaxed: false };
+// Endless difficulty: how many pieces are in hand. Each keeps its own best score.
+const ENDLESS_LEVELS = { easy: { hand: 3, name: "Easy", key: "mb-best-9-easy" }, normal: { hand: 2, name: "Normal", key: "mb-best-9" }, hard: { hand: 1, name: "Hard", key: "mb-best-9-hard" } };
+// Journey has two in hand, three with Relaxed Journey on; the Daily is two for everyone
+const handSize = () => !S ? 2 : S.mode === "endless" ? (ENDLESS_LEVELS[S.level || "normal"] || ENDLESS_LEVELS.normal).hand
+  : S.mode === "journey" && prefs.relaxed && !S.tut ? 3 : 2;
+const dealHand = () => Array.from({ length: handSize() }, () => dealPiece());
+const endlessBest = () => S && S.level === "easy" ? bestEasy : S && S.level === "hard" ? bestHard : best;
+function setEndlessBest(v) {
+  const lv = S.level === "easy" || S.level === "hard" ? S.level : "normal";
+  if (lv === "easy") bestEasy = v; else if (lv === "hard") bestHard = v; else best = v;
+  try { localStorage.setItem(ENDLESS_LEVELS[lv].key, v); } catch (e) {}
+  cloudSoon();
+}
+const enterAll = () => { for (let i = 0; i < 3; i++) entering.add(i); };
+let noAds = false, sessions = 0;
+let lanterns = { week: "", count: 0, claimed: [] };
+let tasks = { day: "", list: [], opened: false };
+let bestEasy = 0, bestHard = 0;
+let best = 0, muted = false, tutDone = false, promised = false;
+let remind = { on: false, time: "19:00" };
+let garden = "auto";
+let clearing = {};
+// Ad pacing lives in memory: a new session starts fresh, as it would in the app
+const ads = { lastBreak: 0, lastReward: 0, rounds: 0 };
+try {
+  best = +localStorage.getItem("mb-best-9") || 0;
+  bestEasy = +localStorage.getItem("mb-best-9-easy") || 0;
+  bestHard = +localStorage.getItem("mb-best-9-hard") || 0;
+  muted = localStorage.getItem("mb-muted") === "1";
+  tutDone = localStorage.getItem("mb-tut") === "done";
+  promised = localStorage.getItem("mb-promise") === "1";
+  daily = Object.assign(daily, JSON.parse(localStorage.getItem("mb-daily") || "{}"));
+  weekly = Object.assign(weekly, JSON.parse(localStorage.getItem("mb-weekly") || "{}"));
+  journey = Object.assign(journey, JSON.parse(localStorage.getItem("mb-journey") || "{}"));
+  // Players who reached a 7-day streak before rare koi existed get their Tancho
+  if ((daily.moon || daily.night) && !journey.koi.includes(15)) journey.koi.push(15);
+  remind = Object.assign(remind, JSON.parse(localStorage.getItem("mb-remind") || "{}"));
+  garden = localStorage.getItem("mb-garden") || "auto";
+  prefs = Object.assign(prefs, JSON.parse(localStorage.getItem("mb-prefs") || "{}"));
+  noAds = localStorage.getItem("mb-noads") === "1";
+  lanterns = Object.assign(lanterns, JSON.parse(localStorage.getItem("mb-lanterns") || "{}"));
+  tasks = Object.assign(tasks, JSON.parse(localStorage.getItem("mb-tasks") || "{}"));
+  look = Object.assign(look, JSON.parse(localStorage.getItem("mb-look") || "{}"));
+  sessions = (+localStorage.getItem("mb-sessions") || 0) + 1;
+  localStorage.setItem("mb-sessions", String(sessions));
+} catch (e) {}
+const nativeApp = !!(window.MBNative && window.MBNative.isNative);
+const saveWeekly = () => { try { localStorage.setItem("mb-weekly", JSON.stringify(weekly)); } catch (e) {} };
+const saveDaily = () => { try { localStorage.setItem("mb-daily", JSON.stringify(daily)); } catch (e) {} cloudSoon(); };
+
+/* ---------- iCloud backup of progress ----------
+   The phone's own storage stays the source the game reads. iCloud holds a copy, so a new
+   iPhone or a reinstall picks up where the player left off. "epoch" goes up on Start over,
+   so an older copy on iCloud never brings back progress the player chose to clear. */
+const CLOUD_KEYS = { journey: "mb-journey", daily: "mb-daily", best: "mb-best-9", bestEasy: "mb-best-9-easy", bestHard: "mb-best-9-hard", tut: "mb-tut" };
+const localEpoch = () => { try { return +localStorage.getItem("mb-epoch") || 0; } catch (e) { return 0; } };
+function cloudSnapshot() {
+  const data = { epoch: localEpoch() };
+  try { Object.entries(CLOUD_KEYS).forEach(([k, key]) => { const v = localStorage.getItem(key); if (v !== null) data[k] = v; }); } catch (e) {}
+  return data;
+}
+// How far a saved journey or daily has come, to pick the one with more progress. Pearls are left out:
+// spending them (on a style or in the garden) is progress too, and an older copy with more pearls must not
+// win and undo the purchase. "rev" goes up on every save, so of two copies that are otherwise even, the
+// one played last wins.
+const parseOr = (v, d) => { try { return v ? JSON.parse(v) : d; } catch (e) { return d; } };
+function journeyRank(v) {
+  const j = parseOr(v, {});
+  const stars = Object.values(j.stars || {}).reduce((a, b) => a + (+b || 0), 0);
+  return [j.unlocked || 0, (j.koi || []).length, stars, (j.owned || []).length, ((j.garden || {}).bought || []).length,
+    ((j.pond || {}).owned || []).length, j.rev || 0];
+}
+const dailyRank = v => { const d = parseOr(v, {}); return [d.last || "", d.streak || 0]; };
+const ahead = (a, b) => { for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] > b[i]; return false; };
+// The parts of "cloud" that are further along than "local", when both belong to the same epoch
+function cloudAhead(local, cloud) {
+  const take = {};
+  if (!cloud || (cloud.epoch || 0) !== local.epoch) return take;
+  if (cloud.journey && ahead(journeyRank(cloud.journey), journeyRank(local.journey))) take.journey = cloud.journey;
+  if (cloud.daily && ahead(dailyRank(cloud.daily), dailyRank(local.daily))) take.daily = cloud.daily;
+  // Each Endless record keeps the higher of the two
+  ["best", "bestEasy", "bestHard"].forEach(k => { if ((+cloud[k] || 0) > (+local[k] || 0)) take[k] = cloud[k]; });
+  if (cloud.tut === "done" && local.tut !== "done") take.tut = "done";
+  return take;
+}
+// Nothing goes up to iCloud before its copy has been read, and an upload never lowers
+// progress made on another device: each part keeps whichever copy is further along.
+let cloudTimer = 0, cloudReady = false, cloudKnown = null;
+function cloudPush() {
+  clearTimeout(cloudTimer);
+  if (!nativeApp || !cloudReady) return;
+  const local = cloudSnapshot();
+  if (cloudKnown && (cloudKnown.epoch || 0) > local.epoch) return;
+  const data = { ...local, ...cloudAhead(local, cloudKnown) };
+  cloudKnown = data;
+  window.MBNative.cloudSave(data);
+}
+function cloudSoon() {
+  if (!nativeApp) return;
+  clearTimeout(cloudTimer);
+  cloudTimer = setTimeout(cloudPush, 2000);
+}
+// Reload at most once per launch, so a disagreement with iCloud can never loop
+function reloadOnce() {
+  try { if (sessionStorage.getItem("mb-reloaded")) return; sessionStorage.setItem("mb-reloaded", "1"); } catch (e) { return; }
+  location.reload();
+}
+// Shown in Settings: is the iCloud copy on?
+let cloudOn = null;
+function syncCloudNote() {
+  const el = $("cloudNote");
+  if (!el) return;
+  el.hidden = !nativeApp;
+  el.textContent = cloudOn === false
+    ? "iCloud backup is off. Sign in to iCloud in the iPhone Settings app to keep your progress on a new iPhone."
+    : "Your progress is backed up to iCloud automatically. Nothing to sign in to.";
+}
+// Returns true when iCloud had more progress and the game needs to reload with it
+async function cloudRestore() {
+  const cloud = await window.MBNative.cloudLoad();
+  cloudOn = !!cloud;
+  syncCloudNote();
+  if (!cloud) return false;
+  cloudKnown = cloud;
+  const local = cloudSnapshot();
+  let take = cloudAhead(local, cloud);
+  if ((cloud.epoch || 0) > local.epoch) {
+    // Started over on another device: follow it
+    take = { epoch: cloud.epoch };
+    Object.keys(CLOUD_KEYS).forEach(k => { take[k] = cloud[k] === undefined ? null : cloud[k]; });
+  }
+  if (!Object.keys(take).length) { cloudReady = true; cloudPush(); return false; }
+  try {
+    Object.entries(take).forEach(([k, v]) => {
+      const key = k === "epoch" ? "mb-epoch" : CLOUD_KEYS[k];
+      if (v === null) localStorage.removeItem(key); else localStorage.setItem(key, String(v));
+    });
+  } catch (e) { return false; }
+  return true;
+}
+// iCloud sometimes delivers its copy a little after launch on a new iPhone. Bring it in
+// straight away if this phone has no progress yet; otherwise it is merged on the next push.
+const hasProgress = () => { const l = cloudSnapshot(); return !!(l.journey || l.daily || +l.best || +l.bestEasy || +l.bestHard); };
+function cloudChanged() {
+  window.MBNative.cloudLoad().then(cloud => {
+    if (!cloud) return;
+    cloudKnown = cloud;
+    if (!hasProgress()) cloudRestore().then(more => { if (more) reloadOnce(); });
+  });
+}
+/* ---------- The games in progress ----------
+   The Journey level, the Endless game and the Daily being played are kept on the phone, so they are still there when
+   iOS has closed the app in the background. Without this a level in progress was lost, and the official Daily could
+   be started over by closing the app. boot.js reads it back and checks it before using it. */
+const GAME_KEY = "mb-game", GAME_SAVE_V = 1;
+let gameSaveTimer = 0, gameSaveOff = false;
+function saveGame() {
+  clearTimeout(gameSaveTimer);
+  gameSaveTimer = 0;
+  if (!S || gameSaveOff) return;
+  try { localStorage.setItem(GAME_KEY, JSON.stringify({ v: GAME_SAVE_V, mode: modeId(S), G })); } catch (e) {}
+}
+// Called after every render: at most one save every half second
+const saveGameSoon = () => { if (!gameSaveTimer) gameSaveTimer = setTimeout(saveGame, 500); };
+function savedGame() {
+  try { const d = JSON.parse(localStorage.getItem(GAME_KEY) || "null"); return d && d.v === GAME_SAVE_V && d.G ? d : {}; } catch (e) { return {}; }
+}
+document.addEventListener("visibilitychange", () => { if (document.hidden) saveGame(); });
+window.addEventListener("pagehide", saveGame);
+// The very first session has no banner and no ad breaks, so the first impression is the game itself
+const firstSession = () => sessions <= 1;
+const bannerOn = () => !firstSession() && !noAds;
+const savePrefs = () => { try { localStorage.setItem("mb-prefs", JSON.stringify(prefs)); } catch (e) {} };
+const saveJourney = () => { journey.rev = (journey.rev || 0) + 1; try { localStorage.setItem("mb-journey", JSON.stringify(journey)); } catch (e) {} cloudSoon(); };
+const colorVars = v => `--c:var(--p${v});--rad:var(--r${v});--img:var(--i${v})`;

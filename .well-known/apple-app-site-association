@@ -1,0 +1,12 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["7DDKQ97KTV.com.kricliff.mentalblock"],
+        "components": [
+          { "/": "/*", "?": { "d": "*" }, "comment": "Only challenge links (with ?d=) open the app" }
+        ]
+      }
+    ]
+  }
+}
