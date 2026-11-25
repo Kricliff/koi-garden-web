@@ -48,8 +48,6 @@ ul.points li::before { content: ""; flex: none; width: 10px; height: 10px; borde
 .shots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 36px 0 0; }
 .shots img { width: 100%; height: auto; border-radius: 18px; border: 1px solid var(--line); box-shadow: 0 6px 16px rgba(0,0,0,.12); display: block; }
 .again { margin-top: 36px; }
-footer { color: var(--muted); font-size: 14px; margin-top: 40px; }
-footer a { color: var(--teal); }
 @media (max-width: 480px) { .shots { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; } .shots img { border-radius: 12px; } }
 @media (prefers-reduced-motion: reduce) { .store { transition: none; } }
 </style>
@@ -59,59 +57,34 @@ footer a { color: var(--teal); }
 <main>
   <img class="icon" src="icon.png" width="96" height="96" alt="">
   <h1>Koi Garden</h1>
-  <p class="tag" data-t="tag">A calm block puzzle. No timer, no rush.</p>
+  <p class="tag">A calm block puzzle. No timer, no rush.</p>
 
   <a class="store" href="https://apps.apple.com/app/id6825775584" data-store>
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.37 12.6c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.48.83-.72 0-1.83-.81-3.01-.79-1.55.02-2.97.9-3.77 2.28-1.61 2.79-.41 6.92 1.16 9.18.77 1.11 1.68 2.35 2.88 2.31 1.16-.05 1.6-.75 3-.75s1.79.75 3.02.72c1.25-.02 2.04-1.13 2.8-2.24.88-1.29 1.24-2.53 1.26-2.6-.03-.01-2.42-.93-2.5-3.68zM14.08 5.84c.64-.77 1.07-1.85.95-2.92-.92.04-2.03.61-2.69 1.38-.59.68-1.11 1.77-.97 2.82 1.02.08 2.07-.52 2.71-1.28z"/></svg>
-    <span><small data-t="small">Download on the</small><b>App Store</b></span>
+    <span><small>Download on the</small><b>App Store</b></span>
   </a>
-  <p class="free" data-t="free">Free on iPhone. Optional purchase to remove ads.</p>
+  <p class="free">Free on iPhone. Optional purchase to remove ads.</p>
 
   <ul class="points">
-    <li data-t="p1">Fill rows, columns and garden beds. Stars from the levels restore ten overgrown Japanese gardens.</li>
-    <li data-t="p2">Hundreds of levels, a Daily puzzle with the same pieces for everyone, and a Weekly board.</li>
-    <li data-t="p3">53 koi to collect for your pond, and a new festival every week.</li>
-    <li data-t="p4">Made by a mental coach for calm minutes: no timer, no rush.</li>
+    <li>Fill rows, columns and garden beds. Stars from the levels restore ten overgrown Japanese gardens.</li>
+    <li>Hundreds of levels, a Daily puzzle with the same pieces for everyone, and a Weekly board.</li>
+    <li>53 koi to collect for your pond, and a new festival every week.</li>
+    <li>Made by a mental coach for calm minutes: no timer, no rush.</li>
   </ul>
 
   <div class="shots">
-    <img data-shot="1-play" src="en-1-play.webp" width="600" height="1304" alt="A level in progress" loading="lazy">
-    <img data-shot="2-garden" src="en-2-garden.webp" width="600" height="1304" alt="The garden" loading="lazy">
-    <img data-shot="7-pond" src="en-7-pond.webp" width="600" height="1304" alt="The koi pond" loading="lazy">
+    <img src="en-1-play.webp" width="600" height="1304" alt="A level in progress" loading="lazy">
+    <img src="en-2-garden.webp" width="600" height="1304" alt="The garden" loading="lazy">
+    <img src="en-7-pond.webp" width="600" height="1304" alt="The koi pond" loading="lazy">
   </div>
 
   <div class="again">
     <a class="store" href="https://apps.apple.com/app/id6825775584" data-store>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.37 12.6c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.48.83-.72 0-1.83-.81-3.01-.79-1.55.02-2.97.9-3.77 2.28-1.61 2.79-.41 6.92 1.16 9.18.77 1.11 1.68 2.35 2.88 2.31 1.16-.05 1.6-.75 3-.75s1.79.75 3.02.72c1.25-.02 2.04-1.13 2.8-2.24.88-1.29 1.24-2.53 1.26-2.6-.03-.01-2.42-.93-2.5-3.68zM14.08 5.84c.64-.77 1.07-1.85.95-2.92-.92.04-2.03.61-2.69 1.38-.59.68-1.11 1.77-.97 2.82 1.02.08 2.07-.52 2.71-1.28z"/></svg>
-      <span><small data-t="small">Download on the</small><b>App Store</b></span>
+      <span><small>Download on the</small><b>App Store</b></span>
     </a>
   </div>
 
-  <footer><span data-t="play">Want to try first?</span> <a href="/" data-t="playlink">Play in the browser</a></footer>
 </main>
-<script>
-(function () {
-  var langs = (navigator.languages || [navigator.language || ""]).join(",").toLowerCase();
-  var no = /(^|,)(nb|nn|no)\b/.test(langs);
-  if (!no) return;
-  var t = {
-    tag: "Et rolig blokkpuslespill. Ingen klokke, ingen stress.",
-    small: "Last ned fra",
-    free: "Gratis på iPhone. Valgfritt kjøp for å fjerne reklame.",
-    p1: "Fyll rader, kolonner og hagebed. Stjernene fra nivåene gjør i stand ti gjengrodde japanske hager.",
-    p2: "Hundrevis av nivåer, et daglig puslespill med de samme brikkene for alle, og et ukesbrett.",
-    p3: "53 koi å samle til dammen, og en ny festival hver uke.",
-    p4: "Laget av en mental trener for rolige minutter: ingen klokke, ikke noe mas.",
-    play: "Vil du prøve først?",
-    playlink: "Spill i nettleseren"
-  };
-  document.documentElement.lang = "no";
-  document.title = "Koi Garden: Block Puzzle · Gratis på iPhone";
-  document.querySelectorAll("[data-t]").forEach(function (el) { var k = el.getAttribute("data-t"); if (t[k]) el.textContent = t[k]; });
-  document.querySelectorAll("[data-shot]").forEach(function (el) { el.src = "no-" + el.getAttribute("data-shot") + ".webp"; });
-  var alts = { "1-play": "Et nivå underveis", "2-garden": "Hagen", "7-pond": "Koidammen" };
-  document.querySelectorAll("[data-shot]").forEach(function (el) { el.alt = alts[el.getAttribute("data-shot")]; });
-})();
-</script>
 </body>
 </html>
