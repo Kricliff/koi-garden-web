@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f5a5e">
+<title>Koi Garden: Block Puzzle · Free on iPhone</title>
+<meta name="description" content="A calm block puzzle. No timer, no rush. Restore a Japanese garden one level at a time. Free on iPhone.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Koi Garden: Block Puzzle">
+<meta property="og:description" content="A calm block puzzle. No timer, no rush. Free on iPhone.">
+<meta property="og:url" content="https://koi.cliffordcoaching.no/last-ned/">
+<meta property="og:image" content="https://koi.cliffordcoaching.no/last-ned/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="apple-itunes-app" content="app-id=6825775584">
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<style>
+@font-face { font-family: "Zen Maru Gothic"; src: url("zen-maru-gothic-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+:root {
+  --bg: #f4efe4; --card: #fffaf0; --ink: #1f3b3d; --muted: #4f6668; --teal: #0f5a5e; --orange: #e8742c; --line: #e2d8c4;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #0d2224; --card: #13302f; --ink: #f3ecdc; --muted: #b9c8c4; --teal: #7cc7c0; --orange: #f2914f; --line: #24473f; }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 17px/1.55 -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+.hero { position: relative; aspect-ratio: 16 / 8; max-height: 62vh; width: 100%; overflow: hidden; background: #0f5a5e url("header.webp") center / cover no-repeat; }
+.hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 55%, var(--bg)); }
+main { max-width: 760px; margin: -48px auto 0; padding: 0 16px 48px; position: relative; z-index: 1; text-align: center; }
+.icon { width: 96px; height: 96px; border-radius: 22px; box-shadow: 0 8px 24px rgba(0,0,0,.18); display: block; margin: 0 auto 16px; }
+h1 { font-family: "Zen Maru Gothic", system-ui, sans-serif; font-weight: 700; font-size: clamp(30px, 7vw, 44px); line-height: 1.15; margin: 0 0 8px; }
+.tag { color: var(--muted); font-size: 19px; margin: 0 0 24px; }
+.store { display: inline-flex; align-items: center; gap: 12px; background: #000; color: #fff; text-decoration: none; border-radius: 14px; padding: 12px 24px 12px 20px; min-height: 60px; box-shadow: 0 6px 18px rgba(0,0,0,.2); transition: transform .15s ease-out; }
+.store:hover { transform: translateY(-1px); }
+.store:active { transform: scale(.98); }
+.store:focus-visible { outline: 3px solid var(--orange); outline-offset: 3px; }
+.store svg { width: 28px; height: 28px; fill: #fff; flex: none; }
+.store span { display: flex; flex-direction: column; text-align: left; line-height: 1.1; }
+.store small { font-size: 12px; opacity: .9; }
+.store b { font-size: 22px; font-weight: 600; letter-spacing: -.2px; }
+.free { margin: 12px 0 0; font-size: 15px; color: var(--muted); }
+ul.points { list-style: none; padding: 0; margin: 36px auto 0; display: grid; gap: 12px; max-width: 520px; text-align: left; }
+ul.points li { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; display: flex; gap: 12px; align-items: baseline; }
+ul.points li::before { content: ""; flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--orange); transform: translateY(-1px); }
+.shots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 36px 0 0; }
+.shots img { width: 100%; height: auto; border-radius: 18px; border: 1px solid var(--line); box-shadow: 0 6px 16px rgba(0,0,0,.12); display: block; }
+.again { margin-top: 36px; }
+footer { color: var(--muted); font-size: 14px; margin-top: 40px; }
+footer a { color: var(--teal); }
+@media (max-width: 480px) { .shots { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; } .shots img { border-radius: 12px; } }
+@media (prefers-reduced-motion: reduce) { .store { transition: none; } }
+</style>
+</head>
+<body>
+<div class="hero" role="img" aria-label="Koi Garden"></div>
+<main>
+  <img class="icon" src="icon.png" width="96" height="96" alt="">
+  <h1>Koi Garden</h1>
+  <p class="tag" data-t="tag">A calm block puzzle. No timer, no rush.</p>
+
+  <a class="store" href="https://apps.apple.com/app/id6825775584" data-store>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.37 12.6c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.48.83-.72 0-1.83-.81-3.01-.79-1.55.02-2.97.9-3.77 2.28-1.61 2.79-.41 6.92 1.16 9.18.77 1.11 1.68 2.35 2.88 2.31 1.16-.05 1.6-.75 3-.75s1.79.75 3.02.72c1.25-.02 2.04-1.13 2.8-2.24.88-1.29 1.24-2.53 1.26-2.6-.03-.01-2.42-.93-2.5-3.68zM14.08 5.84c.64-.77 1.07-1.85.95-2.92-.92.04-2.03.61-2.69 1.38-.59.68-1.11 1.77-.97 2.82 1.02.08 2.07-.52 2.71-1.28z"/></svg>
+    <span><small data-t="small">Download on the</small><b>App Store</b></span>
+  </a>
+  <p class="free" data-t="free">Free on iPhone. Optional purchase to remove ads.</p>
+
+  <ul class="points">
+    <li data-t="p1">Fill rows, columns and garden beds. Stars from the levels restore ten overgrown Japanese gardens.</li>
+    <li data-t="p2">Hundreds of levels, a Daily puzzle with the same pieces for everyone, and a Weekly board.</li>
+    <li data-t="p3">53 koi to collect for your pond, and a new festival every week.</li>
+    <li data-t="p4">Made by a mental coach for calm minutes: no timer, no rush.</li>
+  </ul>
+
+  <div class="shots">
+    <img data-shot="1-play" src="en-1-play.webp" width="600" height="1304" alt="A level in progress" loading="lazy">
+    <img data-shot="2-garden" src="en-2-garden.webp" width="600" height="1304" alt="The garden" loading="lazy">
+    <img data-shot="7-pond" src="en-7-pond.webp" width="600" height="1304" alt="The koi pond" loading="lazy">
+  </div>
+
+  <div class="again">
+    <a class="store" href="https://apps.apple.com/app/id6825775584" data-store>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.37 12.6c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.48.83-.72 0-1.83-.81-3.01-.79-1.55.02-2.97.9-3.77 2.28-1.61 2.79-.41 6.92 1.16 9.18.77 1.11 1.68 2.35 2.88 2.31 1.16-.05 1.6-.75 3-.75s1.79.75 3.02.72c1.25-.02 2.04-1.13 2.8-2.24.88-1.29 1.24-2.53 1.26-2.6-.03-.01-2.42-.93-2.5-3.68zM14.08 5.84c.64-.77 1.07-1.85.95-2.92-.92.04-2.03.61-2.69 1.38-.59.68-1.11 1.77-.97 2.82 1.02.08 2.07-.52 2.71-1.28z"/></svg>
+      <span><small data-t="small">Download on the</small><b>App Store</b></span>
+    </a>
+  </div>
+
+  <footer><span data-t="play">Want to try first?</span> <a href="/" data-t="playlink">Play in the browser</a></footer>
+</main>
+<script>
+(function () {
+  var langs = (navigator.languages || [navigator.language || ""]).join(",").toLowerCase();
+  var no = /(^|,)(nb|nn|no)\b/.test(langs);
+  if (!no) return;
+  var t = {
+    tag: "Et rolig blokkpuslespill. Ingen klokke, ingen stress.",
+    small: "Last ned fra",
+    free: "Gratis på iPhone. Valgfritt kjøp for å fjerne reklame.",
+    p1: "Fyll rader, kolonner og hagebed. Stjernene fra nivåene gjør i stand ti gjengrodde japanske hager.",
+    p2: "Hundrevis av nivåer, et daglig puslespill med de samme brikkene for alle, og et ukesbrett.",
+    p3: "53 koi å samle til dammen, og en ny festival hver uke.",
+    p4: "Laget av en mental trener for rolige minutter: ingen klokke, ikke noe mas.",
+    play: "Vil du prøve først?",
+    playlink: "Spill i nettleseren"
+  };
+  document.documentElement.lang = "no";
+  document.title = "Koi Garden: Block Puzzle · Gratis på iPhone";
+  document.querySelectorAll("[data-t]").forEach(function (el) { var k = el.getAttribute("data-t"); if (t[k]) el.textContent = t[k]; });
+  document.querySelectorAll("[data-shot]").forEach(function (el) { el.src = "no-" + el.getAttribute("data-shot") + ".webp"; });
+  var alts = { "1-play": "Et nivå underveis", "2-garden": "Hagen", "7-pond": "Koidammen" };
+  document.querySelectorAll("[data-shot]").forEach(function (el) { el.alt = alts[el.getAttribute("data-shot")]; });
+})();
+</script>
+</body>
+</html>
